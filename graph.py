@@ -1,4 +1,3 @@
-
 import prioq
 import utils
 import csv
@@ -11,8 +10,6 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import networkx as nx
 from numpy import array
-
-
 
 '''class Graphe:
 
@@ -30,7 +27,6 @@ from numpy import array
         self.dist = n * [-1]
         self.couleurs = n * [Blanc]'''
 
-
 '''columns = defaultdict(list) # each value in each column is appended to a list
 
 with open('edge.csv') as f:
@@ -47,8 +43,9 @@ print(csvreader)
 header = next(csvreader)
 print(header)
 
-nombre_noeuds =37
+nombre_noeuds = 37
 nombre_edge = 57
+nombre_demande = 72
 
 rows = []
 for row in csvreader:
@@ -57,45 +54,38 @@ print(rows)
 file.close()
 
 row_norm = []
-for row in rows :
+for row in rows:
     row1 = row[0].split(';')
     row2 = []
-    for s in row1 :
+    for s in row1:
         row2.append(int(s))
-
 
     row_norm.append(row2)
 
 print(row_norm)
+
 
 def constru_graphe():
     graphe = list()
     for i in range(nombre_noeuds):
         graphe.append([])
 
-
-    for row in row_norm :
+    for row in row_norm:
         graphe[row[1]].append((row[2], row[3]))
         graphe[row[2]].append((row[1], row[3]))
 
-
     return graphe
-
 
 
 print(constru_graphe())
 graphe_arrete = constru_graphe()
 print(len(graphe_arrete))
 
-
-
-
 file1 = open("noeux.csv")
 csvreader1 = csv.reader(file1)
 
 header1 = next(csvreader1)
 print(header1)
-
 
 rows1 = []
 for row in csvreader1:
@@ -107,45 +97,36 @@ row_norm1 = []
 for row in rows1:
     row3 = row[0].split(';')
     row4 = []
-    for s in row3 :
+    for s in row3:
         row4.append(s)
-
 
     row_norm1.append(row4)
 
-
 print(row_norm1)
-
 
 G = nx.Graph()
 for i in range(nombre_noeuds):
-    G.add_node(i, label= row_norm1[i][2], col = 'blue')
+    G.add_node(i, label=row_norm1[i][2], col='blue')
 
 for i in range(nombre_edge):
-    G.add_edge(row_norm[i][1], row_norm[i][2], weight = row_norm[i][3], styl = 'solid')
+    G.add_edge(row_norm[i][1], row_norm[i][2], weight=row_norm[i][3], styl='solid')
 
-
+pos = {i: (float(row_norm1[i][5]), float(row_norm1[i][4])) for i in range(nombre_noeuds)}
 
 liste = list(G.nodes(data='col'))
 colorNodes = {}
 for noeud in liste:
-    colorNodes[noeud[0]]=noeud[1]
+    colorNodes[noeud[0]] = noeud[1]
 
-colorList=[colorNodes[node] for node in colorNodes]
+colorList = [colorNodes[node] for node in colorNodes]
 
 liste = list(G.nodes(data='label'))
 labels_nodes = {}
 for noeud in liste:
-    labels_nodes[noeud[0]]=noeud[1]
+    labels_nodes[noeud[0]] = noeud[1]
 
 labels_edges = {}
-labels_edges = {edge:G.edges[edge]['weight'] for edge in G.edges}
-
-
-
-
-
-pos = nx.spring_layout(G)
+labels_edges = {edge: G.edges[edge]['weight'] for edge in G.edges}
 
 # nodes
 nx.draw_networkx_nodes(G, pos, node_size=100, node_color=colorList, alpha=0.9)
@@ -163,10 +144,6 @@ nx.draw_networkx_edge_labels(G, pos, edge_labels=labels_edges, font_color='red')
 plt.axis('off')
 plt.savefig('fig1.png')
 plt.show()
-
-
-
-
 
 '''def visiter_voisins(G, u, f):
     for (v, d) in G.aretes[u]:
@@ -211,6 +188,37 @@ def insertOrReplace(minHeap, element, weight):
 
 # Dijkstra takes as an input a source node and a graph
 # It outputs the lengths of the shortest paths from the initial node to the others
+def dijkstra2(graph, sourceNode):
+    # We first initialize the useful data structures
+    # Distances is the result of the algorithm, with the lengths of the path from the source node to node i
+    # MinHeap is a min-heap that will store the nodes to visit and the associated weight
+    # If a node is not in minHeap, it has been visited
+    # We initialize the algorithm with the source node at distance 0
+    distances = [[float("inf"),[]] for i in range(len(graph))]
+    minHeap = [(0, sourceNode)]
+    distances[sourceNode] = [0,[]]
+    liste_edge = []
+    # Main loop
+    while len(minHeap) != 0:
+
+        # We extract the closest node from the heap
+        (closestNodeDistance, closestNode) = heapq.heappop(minHeap)
+
+        liste_edge = []
+        # We update the distance to the neighbors of this node
+        for (neighbor, weight) in graph[closestNode]:
+            liste_edge.append(closestNode)
+            neighborDistance = closestNodeDistance + weight
+
+            if neighborDistance < distances[neighbor][0]:
+                liste_edge.append(neighbor)
+                insertOrReplace(minHeap, neighbor, neighborDistance)
+                distances[neighbor] = [neighborDistance, liste_edge]
+
+
+    # We return the distances
+    return distances
+
 def dijkstra(graph, sourceNode):
     # We first initialize the useful data structures
     # Distances is the result of the algorithm, with the lengths of the path from the source node to node i
@@ -227,17 +235,55 @@ def dijkstra(graph, sourceNode):
         # We extract the closest node from the heap
         (closestNodeDistance, closestNode) = heapq.heappop(minHeap)
 
+
         # We update the distance to the neighbors of this node
         for (neighbor, weight) in graph[closestNode]:
+
             neighborDistance = closestNodeDistance + weight
 
             if neighborDistance < distances[neighbor]:
+
                 insertOrReplace(minHeap, neighbor, neighborDistance)
                 distances[neighbor] = neighborDistance
+
 
     # We return the distances
     return distances
 
 
 print(dijkstra(graphe_arrete, 0))
+
+file2 = open("demande.csv")
+csvreader2 = csv.reader(file2)
+print(file2)
+print(csvreader2)
+header2 = next(csvreader2)
+print(header2)
+
+rows2 = []
+for row in csvreader2:
+    rows2.append(row)
+print(rows2)
+file2.close()
+
+row_norm2 = []
+for row in rows2:
+    rowA = row[0].split(';')
+    rowB = []
+    for s in rowA:
+        rowB.append(float(s))
+
+    row_norm2.append(rowB)
+
+print(row_norm2)
+
+CHARGES = [[] for i in range(nombre_edge)]
+
+for row in row_norm2:
+    nodeA = int(row[0])
+    nodeB = int(row[1])
+    demande = row[2]
+    chemins = dijkstra(graphe_arrete, nodeA)
+    cheminB = chemins[nodeB]
+
 
