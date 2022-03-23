@@ -47,6 +47,8 @@ for row in rows:
 
 print(row_norm)
 
+weights = [row_norm[i][3] for i in range(nombre_edge)]
+
 def constru_graphe():
     graphe = list()
     for i in range(nombre_noeuds):
@@ -87,7 +89,7 @@ for row in rows1:
 
 
 
-
+###################################################################
 
 Blanc = 0
 Noir = 1
@@ -106,7 +108,7 @@ def insertOrReplace(minHeap, element, weight):
         heapq.heapify(minHeap)
 
 
-###################################################################
+
 
 # Dijkstra takes as an input a source node and a graph
 # It outputs the lengths of the shortest paths from the initial node to the others
@@ -219,7 +221,7 @@ def tous_chemins(peres, r):
     return cs
 
 
-
+#################################################################################################################
 file2 = open("demande.csv")
 csvreader2 = csv.reader(file2)
 
@@ -241,52 +243,70 @@ for row in rows2:
     row_norm2.append(rowB)
 
 
-print(row_norm2)
-print(row_norm)
+
+######################################################################################################
 
 
-CHARGES = [[] for i in range(nombre_edge)]
-
-for row in row_norm2:
-
-    nodeA = int(row[0])
-    nodeB = int(row[1])
 
 
-    demande = row[2]
+
+###############################################################################################
+def constru_graphe_weight(weight):
+    graphe = list()
+    for i in range(nombre_noeuds):
+        graphe.append([])
+
+    for i, row in enumerate(row_norm):
+        graphe[row[1]].append((row[2], weight[i]))
+        graphe[row[2]].append((row[1], weight[i]))
+
+    return graphe
+
+def Loss_weight(weight):
+    graphe_arrete_weight = constru_graphe_weight(weight)
+    CHARGES_weight = [[] for i in range(nombre_edge)]
+    gex_weight = Graphe(graphe_arrete_weight)
 
 
-    p1, d1 = dijkstra3(gex, nodeA)
+    for row in row_norm2:
 
-    cheminB = chemin(p1, nodeB, nodeA)
-    for i in range(len(cheminB)-1):
-        nodeprev, nodesuiv = cheminB[i], cheminB[i+1]
-        for rowa in row_norm :
-            if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
-                    or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
-                CHARGES[rowa[0]-1].append(demande)
+        nodeA = int(row[0])
+        nodeB = int(row[1])
 
+        demande = row[2]
 
-charges_tot = []
+        p1, d1 = dijkstra3(gex_weight, nodeA)
 
-'''sum1 = 0
-for edge in CHARGES:
-    for demandeedge in edge :
-        sum1 +=1
-print(sum1)'''
+        cheminB = chemin(p1, nodeB, nodeA)
 
-for charge in CHARGES:
-    charges_tot.append(int(10*sum(charge))/10)
+        for i in range(len(cheminB) - 1):
+            nodeprev, nodesuiv = cheminB[i], cheminB[i + 1]
+
+            for rowa in row_norm:
+                if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                        or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+
+                    CHARGES_weight[rowa[0] - 1].append(demande)
 
 
-print(CHARGES)
-print(charges_tot)
+    charges_tot_weight = []
 
-MAX = max(charges_tot)
-iMAX = charges_tot.index(MAX) +1
-print(MAX, iMAX)
+    for charge in CHARGES_weight:
+        charges_tot_weight.append(int(10 * sum(charge)) / 10)
 
 
+    print(CHARGES_weight)
+    print(charges_tot_weight)
+
+    MAX = max(charges_tot_weight)
+    iMAX = charges_tot_weight.index(MAX) + 1
+    print(MAX, iMAX)
+    return MAX, charges_tot_weight
+
+Loss, charges_tot = Loss_weight(weights)
+
+
+###############################################################################################
 
 
 G1 = nx.Graph()
