@@ -11,6 +11,7 @@ from mpl_toolkits.basemap import Basemap
 import prioqueue
 from Graphe import Graphe
 
+##########################################################################################
 
 def add_edge(adj: List[List[int]],
              src: int, dest: int) -> None:
@@ -98,8 +99,7 @@ def print_paths(adj: List[List[int]], n: int,
             paths_unique.append(v)
     return paths_unique
 
-
-
+######################################################################################################
 # Driver Code
 
 file = open("edge.csv")
@@ -107,9 +107,9 @@ csvreader = csv.reader(file)
 
 header = next(csvreader)
 
-nombre_noeuds = 37
-nombre_edge = 57
-nombre_demande = 72
+
+
+
 
 rows = []
 for row in csvreader:
@@ -128,22 +128,26 @@ for row in rows:
 
 print(row_norm)
 
-weights = [row_norm[i][3] for i in range(nombre_edge)]
+file2 = open("demande.csv")
+csvreader2 = csv.reader(file2)
 
+header2 = next(csvreader2)
 
-def constru_graphe():
-    graphe = list()
-    for i in range(nombre_noeuds):
-        graphe.append([])
+rows2 = []
+for row in csvreader2:
+    rows2.append(row)
 
-    for row in row_norm:
-        graphe[row[1]].append((row[2], row[3]))
-        graphe[row[2]].append((row[1], row[3]))
+file2.close()
 
-    return graphe
+row_norm2 = []
+for row in rows2:
+    rowA = row[0].split(';')
+    rowB = []
+    for s in rowA:
+        rowB.append(float(s))
 
+    row_norm2.append(rowB)
 
-graphe_arrete = constru_graphe()
 
 file1 = open("noeux.csv")
 csvreader1 = csv.reader(file1)
@@ -164,8 +168,31 @@ for row in rows1:
         row4.append(s)
 
     row_norm1.append(row4)
+##########################################################################################################
 
-###################################################################
+
+nombre_edge = len(row_norm)
+nombre_noeuds = len(row_norm1)
+nombre_demande = len(row_norm2)
+
+weights = [row_norm[i][3] for i in range(nombre_edge)]
+
+###########################################################################################################
+#################################################################################################################
+
+
+def constru_graphe():
+    graphe = list()
+    for i in range(nombre_noeuds):
+        graphe.append([])
+
+    for row in row_norm:
+        graphe[row[1]].append((row[2], row[3]))
+        graphe[row[2]].append((row[1], row[3]))
+
+    return graphe
+
+
 
 Blanc = 0
 Noir = 1
@@ -244,6 +271,7 @@ def dijkstra(graph, sourceNode):
     # We return the distances
     return distances
 
+graphe_arrete = constru_graphe()
 
 gex = Graphe(graphe_arrete)
 
@@ -294,27 +322,10 @@ def tous_chemins(peres, r):
             cs.append(chemin(peres, i, r))
     return cs
 
+#################################################################################################################
+#################################################################################################################
 
 #################################################################################################################
-file2 = open("demande.csv")
-csvreader2 = csv.reader(file2)
-
-header2 = next(csvreader2)
-
-rows2 = []
-for row in csvreader2:
-    rows2.append(row)
-
-file2.close()
-
-row_norm2 = []
-for row in rows2:
-    rowA = row[0].split(';')
-    rowB = []
-    for s in rowA:
-        rowB.append(float(s))
-
-    row_norm2.append(rowB)
 
 
 '''''######################################################################################################
@@ -382,7 +393,6 @@ MAX = max(charges_tot_weight)
 iMAX = charges_tot_weight.index(MAX) + 1
 print(MAX, iMAX)'''
 
-
 ''''###############################################################################################
 def constru_graphe_weight(weight):
     graphe = list()
@@ -437,14 +447,13 @@ Loss, charges_tot_weight = Loss_weight(weights)'''
 ###############################################################################################
 
 
-    # Number of vertices
+# Number of vertices
 n = nombre_noeuds
 
-    # array of vectors is used
-    # to store the graph
-    # in the form of an adjacency list
+# array of vectors is used
+# to store the graph
+# in the form of an adjacency list
 adj = [[] for _ in range(n)]
-
 
 for row in row_norm:
     add_edge(adj, row[1], row[2])
@@ -452,16 +461,11 @@ for row in row_norm:
 
     # Given source and destination
 
-
     # Function Call
 
 
-
-
 def Loss_weight(weight):
-
     CHARGES_weight = [[] for i in range(nombre_edge)]
-
 
     for row in row_norm2:
 
@@ -473,8 +477,6 @@ def Loss_weight(weight):
 
         paths_unique = print_paths(adj, n, nodeA, nodeB)
 
-
-
         for path in paths_unique:
 
             for i in range(len(path) - 1):
@@ -483,24 +485,34 @@ def Loss_weight(weight):
                 for rowa in row_norm:
                     if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
                             or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
-                        CHARGES_weight[rowa[0] - 1].append(demande/len(paths_unique))
+                        CHARGES_weight[rowa[0] - 1].append(demande / len(paths_unique))
 
     charges_tot_weight = []
 
     for charge in CHARGES_weight:
         charges_tot_weight.append(int(10 * sum(charge)) / 10)
 
-    print(CHARGES_weight)
+
     print(charges_tot_weight)
 
-    MAX = max(charges_tot_weight)
-    iMAX = charges_tot_weight.index(MAX) + 1
+    charge_capacite = []
+    for i in range(len(charges_tot_weight)):
+        charge_capacite.append(charges_tot_weight[i]/row_norm[4])
+
+
+    print(charge_capacite)
+
+
+    MAX = max(charge_capacite)
+    iMAX = charge_capacite.index(MAX) + 1
     print(MAX, iMAX)
-    return MAX, charges_tot_weight
+    return iMAX, MAX, charge_capacite
 
 
-Loss, charges_tot_weight = Loss_weight(weights)
+indice, Loss, charges_tot_weight = Loss_weight(weights)
 ###############################################################################################
+#################################################################################################################
+#################################################################################################################
 
 G1 = nx.Graph()
 for i in range(nombre_noeuds):
