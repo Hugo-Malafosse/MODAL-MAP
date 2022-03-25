@@ -497,7 +497,7 @@ def Loss_weight(weight):
 
     charge_capacite = []
     for i in range(len(charges_tot_weight)):
-        charge_capacite.append(charges_tot_weight[i]/row_norm[4])
+        charge_capacite.append(int(10*charges_tot_weight[i]/row_norm[i][4])/10)
 
 
     print(charge_capacite)
