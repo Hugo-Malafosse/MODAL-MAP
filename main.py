@@ -1,5 +1,6 @@
 import csv
 import heapq
+import random
 from collections import deque
 from sys import maxsize
 from typing import List
@@ -35,7 +36,7 @@ for row in rows:
 
     row_norm.append(row2)
 
-print(row_norm)
+
 
 file2 = open("demande.csv")
 csvreader2 = csv.reader(file2)
@@ -83,7 +84,9 @@ nombre_edge = len(row_norm)
 nombre_noeuds = len(row_norm1)
 nombre_demande = len(row_norm2)
 
-weights = [row_norm[i][3] for i in range(nombre_edge)]
+#weights = [row_norm[i][3] for i in range(nombre_edge)]
+weights = [random.randint(1,5) for i in range(nombre_edge)]
+
 
 
 ###########################################################################################################
@@ -129,7 +132,7 @@ def find_paths(paths: List[List[int]], path: List[int],
 # from the given source vertex
 def bfs(adj: List[List[int]],
         parent: List[List[int]], n: int,
-        start: int, weight) -> None:
+        start: int) -> None:
     # dist will contain shortest distance
     # from start to every other vertex
     dist = [maxsize for _ in range(n)]
@@ -151,8 +154,8 @@ def bfs(adj: List[List[int]],
                 # A shorter distance is found
                 # So erase all the previous parents
                 # and insert new parent u in parent[v]
-                distance1 = weight[findindexedge(v, u)]
-                dist[v] = dist[u] + distance1
+
+                dist[v] = dist[u] + 1
                 q.append(v)
                 parent[v].clear()
                 parent[v].append(u)
@@ -167,13 +170,13 @@ def bfs(adj: List[List[int]],
 # Function which prints all the paths
 # from start to end
 def print_paths(adj: List[List[int]], n: int,
-                start: int, end: int, weight) -> None:
+                start: int, end: int) -> None:
     paths = []
     path = []
     parent = [[] for _ in range(n)]
 
     # Function call to bfs
-    bfs(adj, parent, n, start, weight)
+    bfs(adj, parent, n, start)
 
     # Function call to find_paths
     find_paths(paths, path, parent, n, end)
@@ -185,6 +188,218 @@ def print_paths(adj: List[List[int]], n: int,
 
 
 #################################################################################################################
+def create_graph(weight):
+    nombre_noeuds_max = nombre_noeuds + sum(weight) - len(weight)
+
+
+    # Number of vertices
+    n = nombre_noeuds_max
+
+    # array of vectors is used
+    # to store the graph
+    # in the form of an adjacency list
+    adj = [[] for _ in range(n)]
+    compteur = nombre_noeuds
+    for i in range(nombre_edge):
+        if weight[i] == 1:
+            add_edge(adj, row_norm[i][2], row_norm[i][1])
+        else:
+            noeudprev = row_norm[i][1]
+            for j in range(weight[i] - 1):
+                noeudsuiv = compteur
+                compteur+=1
+
+                add_edge(adj, noeudsuiv, noeudprev)
+                noeudprev = noeudsuiv
+
+            add_edge(adj, row_norm[i][2], noeudprev)
+
+        # Given source and destination
+
+    return adj, n
+    # Function Call
+
+def normalisation(chemins):
+    chemins_norm = []
+    for chem in chemins:
+        chem_norm = []
+        for node in chem:
+            if node < nombre_noeuds:
+                chem_norm.append(node)
+        chemins_norm.append(chem_norm)
+    return chemins_norm
+
+
+
+
+
+def Loss_weight(weight):
+
+    CHARGES_weight = [[] for i in range(nombre_edge)]
+    adj, n= create_graph(weight)
+    for row in row_norm2:
+
+        nodeA = int(row[0])
+
+        nodeB = int(row[1])
+
+        demande = row[2]
+
+        paths_unique = print_paths(adj, n, nodeA, nodeB)
+        paths_unique = normalisation(paths_unique)
+
+        for path in paths_unique:
+
+            for i in range(len(path) - 1):
+                nodeprev, nodesuiv = path[i], path[i + 1]
+
+                for rowa in row_norm:
+                    if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                            or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+                        CHARGES_weight[rowa[0] - 1].append(demande / len(paths_unique))
+
+    charges_tot_weight = []
+
+    for charge in CHARGES_weight:
+        charges_tot_weight.append(int(10 * sum(charge)) / 10)
+
+    charge_capacite = []
+    for i in range(len(charges_tot_weight)):
+        charge_capacite.append(int(10 * charges_tot_weight[i] / row_norm[i][4]) / 10)
+
+    MAX = max(charge_capacite)
+    iMAX = charge_capacite.index(MAX)
+
+
+    return iMAX, MAX, charge_capacite
+
+
+##############################################################################################
+
+def afficher_graphe(weight):
+    indice, Loss, charges_tot_weight = Loss_weight(weight)
+    G1 = nx.Graph()
+    for i in range(nombre_noeuds):
+        G1.add_node(i, label=row_norm1[i][2], col='blue')
+
+    for i in range(nombre_edge):
+        G1.add_edge(row_norm[i][1], row_norm[i][2], weight=charges_tot_weight[row_norm[i][0] - 1]
+                    , styl='solid')
+
+    pos = {i: (float(row_norm1[i][5]), float(row_norm1[i][4]))
+           for i in range(nombre_noeuds)}
+
+    liste = list(G1.nodes(data='col'))
+    colorNodes = {}
+    for noeud in liste:
+        colorNodes[noeud[0]] = noeud[1]
+
+    colorList = [colorNodes[node] for node in colorNodes]
+
+    liste = list(G1.nodes(data='label'))
+    labels_nodes = {}
+    for noeud in liste:
+        labels_nodes[noeud[0]] = noeud[1]
+
+    labels_edges = {}
+    labels_edges = {edge: G1.edges[edge]['weight'] for edge in G1.edges}
+
+    # nodes
+    nx.draw_networkx_nodes(G1, pos, node_size=100, node_color=colorList, alpha=0.9)
+
+    # labels
+    nx.draw_networkx_labels(G1, pos, labels=labels_nodes,
+                            font_size=15,
+                            font_color='black',
+                            font_family='sans-serif')
+
+    # edges
+    nx.draw_networkx_edges(G1, pos, width=3)
+    nx.draw_networkx_edge_labels(G1, pos, edge_labels=labels_edges, font_color='red')
+    plt.axis('off')
+    plt.savefig('fig1.png')
+
+    plt.show()
+
+
+###############################################################################################
+
+# INITIALEMENT
+
+indice, Loss, charge_capa = Loss_weight(weights)
+
+
+print(weights)
+print(indice, Loss)
+afficher_graphe(weights)
+
+
+
+###############################################################################################
+
+def df(i, weight):
+    dweight = weight.copy()
+    dweight[i] += 10
+    indicedf, Lossdf, charges_tot_weightdf = Loss_weight(dweight)
+    indice1, Loss1, charges_tot_weight1 = Loss_weight(weight)
+
+    return (Lossdf - Loss1)
+
+
+def grad(weight):
+    gradient = []
+    for i in range(nombre_edge):
+        gradient.append(df(i, weight))
+    return gradient
+
+
+def un_pas(pas, weight):
+    weightnouv = np.array(weight) - np.array(pas * grad(weight))
+    weightint = []
+
+    for i in range(len(weightnouv)):
+        weightint.append(int(weightnouv[i]) + 2)
+
+    return weightint
+
+
+#################################################################################################################
+
+LOSS = []
+W = []
+
+W.append(weights)
+LOSS.append(Loss)
+k = 1000
+for i in range(k):
+    weight = [random.randint(1, 5) for j in range(nombre_edge)]
+    W.append(weight)
+    ind, Loss1, charges_tot_weight2 = Loss_weight(weight)
+    LOSS.append(Loss1)
+
+min = min(LOSS)
+imin = LOSS.index(min)
+wmin = W[imin]
+
+print(W)
+print(LOSS)
+print(min, wmin)
+afficher_graphe(wmin)
+
+#################################################################################################################
+
+
+'''m = Basemap(width=12000000, height=9000000, projection='lcc',
+            resolution='c', lat_1=45., lat_2=55, lat_0=50, lon_0=-107.)
+# draw coastlines.
+m.drawcoastlines()
+# draw a boundary around the map, fill the background.
+# this background will end up being the ocean color, since
+# the continents will be drawn on top.
+m.drawmapboundary(fill_color='aqua')
+# fill continents, set lake color same as ocean color.
+m.fillcontinents(color='coral', lake_color='aqua')
+plt.show()'''
 
 
 def constru_graphe():
@@ -452,179 +667,3 @@ def Loss_weight(weight):
 
 Loss, charges_tot_weight = Loss_weight(weights)'''
 ###############################################################################################
-
-
-# Number of vertices
-n = nombre_noeuds
-
-# array of vectors is used
-# to store the graph
-# in the form of an adjacency list
-adj = [[] for _ in range(n)]
-
-for row in row_norm:
-    add_edge(adj, row[1], row[2])
-    add_edge(adj, row[2], row[1])
-
-    # Given source and destination
-
-    # Function Call
-
-
-def Loss_weight(weight):
-    CHARGES_weight = [[] for i in range(nombre_edge)]
-
-    for row in row_norm2:
-
-        nodeA = int(row[0])
-
-        nodeB = int(row[1])
-
-        demande = row[2]
-
-        paths_unique = print_paths(adj, n, nodeA, nodeB, weight)
-
-        for path in paths_unique:
-
-            for i in range(len(path) - 1):
-                nodeprev, nodesuiv = path[i], path[i + 1]
-
-                for rowa in row_norm:
-                    if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
-                            or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
-                        CHARGES_weight[rowa[0] - 1].append(demande / len(paths_unique))
-
-    charges_tot_weight = []
-
-    for charge in CHARGES_weight:
-        charges_tot_weight.append(int(10 * sum(charge)) / 10)
-
-    charge_capacite = []
-    for i in range(len(charges_tot_weight)):
-        charge_capacite.append(int(10 * charges_tot_weight[i] / row_norm[i][4]) / 10)
-
-    MAX = max(charge_capacite)
-    iMAX = charge_capacite.index(MAX) + 1
-    #print(MAX)
-    #print(iMAX)
-    #print(charge_capacite)
-
-    return iMAX, MAX, charge_capacite
-
-
-
-##############################################################################################
-
-def afficher_graphe(weight):
-    indice, Loss, charges_tot_weight = Loss_weight(weight)
-    G1 = nx.Graph()
-    for i in range(nombre_noeuds):
-        G1.add_node(i, label=row_norm1[i][2], col='blue')
-
-    for i in range(nombre_edge):
-        G1.add_edge(row_norm[i][1], row_norm[i][2], weight=charges_tot_weight[row_norm[i][0] - 1]
-                    , styl='solid')
-
-    pos = {i: (float(row_norm1[i][5]), float(row_norm1[i][4]))
-           for i in range(nombre_noeuds)}
-
-    liste = list(G1.nodes(data='col'))
-    colorNodes = {}
-    for noeud in liste:
-        colorNodes[noeud[0]] = noeud[1]
-
-    colorList = [colorNodes[node] for node in colorNodes]
-
-    liste = list(G1.nodes(data='label'))
-    labels_nodes = {}
-    for noeud in liste:
-        labels_nodes[noeud[0]] = noeud[1]
-
-    labels_edges = {}
-    labels_edges = {edge: G1.edges[edge]['weight'] for edge in G1.edges}
-
-    # nodes
-    nx.draw_networkx_nodes(G1, pos, node_size=100, node_color=colorList, alpha=0.9)
-
-    # labels
-    nx.draw_networkx_labels(G1, pos, labels=labels_nodes,
-                            font_size=15,
-                            font_color='black',
-                            font_family='sans-serif')
-
-    # edges
-    nx.draw_networkx_edges(G1, pos, width=3)
-    nx.draw_networkx_edge_labels(G1, pos, edge_labels=labels_edges, font_color='red')
-    plt.axis('off')
-    plt.savefig('fig1.png')
-
-    plt.show()
-
-###############################################################################################
-
-def df(i, weight):
-    dweight = weight.copy()
-    dweight[i] += 10
-    indicedf, Lossdf, charges_tot_weightdf = Loss_weight(dweight)
-    indice1, Loss1, charges_tot_weight1 = Loss_weight(weight)
-
-    return (Lossdf - Loss1)
-
-
-def grad(weight):
-    gradient = []
-    for i in range(nombre_edge):
-        gradient.append(df(i, weight))
-    return gradient
-
-
-def un_pas(pas, weight):
-    weightnouv = np.array(weight) - np.array(pas * grad(weight))
-    weightint = []
-
-    for i in range(len(weightnouv)) :
-        weightint.append(int(weightnouv[i]) +2)
-
-
-
-    return weightint
-
-
-indice1, Loss, charges_tot_weight1 = Loss_weight(weights)
-print(weights)
-print(indice1, Loss, charges_tot_weight1)
-afficher_graphe(weights)
-
-
-
-
-while Loss>2:
-    weights = un_pas(1, weights)
-    print(weights)
-    indice2, Loss, charges_tot_weight2 = Loss_weight(weights)
-    print(Loss)
-
-print(weights)
-print(indice2, Loss, charges_tot_weight2)
-
-afficher_graphe(weights)
-
-#################################################################################################################
-
-
-
-#################################################################################################################
-
-
-
-'''m = Basemap(width=12000000, height=9000000, projection='lcc',
-            resolution='c', lat_1=45., lat_2=55, lat_0=50, lon_0=-107.)
-# draw coastlines.
-m.drawcoastlines()
-# draw a boundary around the map, fill the background.
-# this background will end up being the ocean color, since
-# the continents will be drawn on top.
-m.drawmapboundary(fill_color='aqua')
-# fill continents, set lake color same as ocean color.
-m.fillcontinents(color='coral', lake_color='aqua')
-plt.show()'''
