@@ -339,7 +339,7 @@ afficher_graphe(weights)
 
 def df(i, weight):
     dweight = weight.copy()
-    dweight[i] += 10
+    dweight[i] += 1
     indicedf, Lossdf, charges_tot_weightdf = Loss_weight(dweight)
     indice1, Loss1, charges_tot_weight1 = Loss_weight(weight)
 
@@ -385,6 +385,25 @@ print(W)
 print(LOSS)
 print(min, wmin)
 afficher_graphe(wmin)
+
+'''
+k=10
+for i in range(k):
+    weights = un_pas(1, weights)
+    print(weights)
+    
+
+indice1, Loss1, charge_capa1 = Loss_weight(weights)
+
+
+print(weights)
+print(indice1, Loss1)
+afficher_graphe(weights)
+
+
+'''
+
+
 
 #################################################################################################################
 
