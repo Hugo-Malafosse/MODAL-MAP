@@ -113,7 +113,7 @@ for i in range(k):
     print(weights)
 afficher_graphe(weights) 
 
-###### Méthode epsilon (on augment le poids de tous ceux proche du max à epsilon près)
+###### Méthode epsilon (on augmente le poids de tous ceux proche du max à epsilon près)
 
 def Loss_weight_eps(weight,eps):
 
