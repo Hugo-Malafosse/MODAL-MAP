@@ -59,6 +59,23 @@ for i in range(k):
 afficher_graphe(weights)
 
 ##### Méthode N max (on augmente le poids de N max)
+def N_max_elements(charge, N):
+    result_list = []
+    l = charge.copy()
+  
+    for i in range(0, N): 
+        maximum = 0
+          
+        for j in range(len(l)):     
+            if l[j] > maximum:
+                maximum = l[j]
+        index = charge.index(maximum)         
+        l.remove(maximum)
+        result_list.append((index,maximum))
+          
+    return result_list
+
+
 def Loss_weight_3(weight,N):
 
     CHARGES_weight = [[] for i in range(nombre_edge)]
