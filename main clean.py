@@ -12,9 +12,41 @@ from mpl_toolkits.basemap import Basemap
 
 import prioqueue
 from Graphe import Graphe
+import itertools
+import threading
+import time
+import sys
+
 
 ######################################################################################################
 # Driver Code
+
+
+'''def animate_loading(method: object) -> object:
+    def animated():
+
+        done = False
+
+        # here is the animation
+        def animate():
+            time.sleep(0.000001)
+            for c in itertools.cycle(['|', '/', '-', '\\']):
+                if done:
+                    break
+                sys.stdout.write('\rloading ' + c)
+                sys.stdout.flush()
+                time.sleep(0.1)
+            sys.stdout.write('\rDone!     ')
+
+        t = threading.Thread(target=animate)
+        t.start()
+
+        # process method here
+        method()
+        done = True
+
+    return animated()'''
+
 
 file = open("edge.csv")
 csvreader = csv.reader(file)
@@ -121,7 +153,6 @@ def Loss_weight_nx(weight):
         nombre_passage = [0 for i in range(nombre_edge)]
         lenpath = len(paths_unique)
 
-
         for path in paths_unique:
 
             for i in range(len(path) - 1):
@@ -131,9 +162,6 @@ def Loss_weight_nx(weight):
                     if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
                             or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
                         nombre_passage[rowa[0] - 1] += 1
-
-
-
 
         for path1 in paths_unique:
 
@@ -160,6 +188,10 @@ def Loss_weight_nx(weight):
     return iMAX, MAX, charge_capacite, graph
 
 
+
+
+
+
 ##############################################################################################
 
 def afficher_graphe(charges_tot_weight, graph):
@@ -169,12 +201,14 @@ def afficher_graphe(charges_tot_weight, graph):
 
     for i in range(nombre_edge):
         G1.add_edge(EDGES[i][1], EDGES[i][2], weight=charges_tot_weight[EDGES[i][0] - 1]
-                    , styl='solid')
+                    , styl='solid', col ='black')
+
 
     pos = {i: (float(NODES[i][5]), float(NODES[i][4]))
            for i in range(nombre_noeuds)}
 
     liste = list(G1.nodes(data='col'))
+
     colorNodes = {}
     for noeud in liste:
         colorNodes[noeud[0]] = noeud[1]
@@ -192,6 +226,27 @@ def afficher_graphe(charges_tot_weight, graph):
     # nodes
     nx.draw_networkx_nodes(G1, pos, node_size=100, node_color=colorList, alpha=0.9)
 
+    maxy = max(charges_tot_weight)
+    imax = charges_tot_weight.index(maxy)
+
+    miny = min(charges_tot_weight)
+    imin = charges_tot_weight.index(miny)
+
+
+    colorEdge = []
+    for i in range(nombre_edge):
+        if i == imax:
+            colorEdge.append('red')
+        elif i == imin:
+            colorEdge.append('blue')
+        else :
+            colorEdge.append('black')
+
+
+
+
+
+
     # labels
     nx.draw_networkx_labels(G1, pos, labels=labels_nodes,
                             font_size=15,
@@ -199,7 +254,7 @@ def afficher_graphe(charges_tot_weight, graph):
                             font_family='sans-serif')
 
     # edges
-    nx.draw_networkx_edges(G1, pos, width=3)
+    nx.draw_networkx_edges(G1, pos, width=3, edge_color=colorEdge)
     nx.draw_networkx_edge_labels(G1, pos, edge_labels=labels_edges, font_color='red')
     plt.axis('off')
     plt.savefig('fig1.png')
@@ -218,112 +273,472 @@ print(indice, Loss)
 afficher_graphe(charge_capa, graph)
 
 ###############################################################################################
-'''
-def df(i, weight, d):
-    dweight = weight.copy()
-    dweight[i] += d
-    indicedf, Lossdf, charges_tot_weightdf = Loss_weight(dweight)
-    indice1, Loss1, charges_tot_weight1 = Loss_weight(weight)
-
-    return (Lossdf - Loss1)
-
-
-def grad(weight, d, pas):
-    gradient = []
-    for i in range(nombre_edge):
-        gradient.append(pas*df(i, weight, d))
-    print(gradient)
-    return gradient
-
-
-def un_pas(pas, weight, d):
-    weightnouv = np.array(weight) - np.array(grad(weight, d, pas))
-    weightint = []
-
-    for i in range(len(weightnouv)):
-        weightint.append(max(1, int(weightnouv[i])))
-
-    return weightint'''
-
-#################################################################################################################
-
-LOSS = []
-W = []
-CHARGE = []
-GRAPHE = []
-
-W.append(WEIGHTS_global)
-LOSS.append(Loss)
-CHARGE.append(charge_capa)
-GRAPHE.append(graph)
-k = 1000
-for i in range(k):
-    ratio = i/k*100
-    print(ratio)
-    weight = [random.randint(1,5) for j in range(nombre_edge)]
-    W.append(weight)
-    ind, Loss1, charges_tot_weight2, graph = Loss_weight_nx(weight)
-    CHARGE.append(charges_tot_weight2)
-    GRAPHE.append(graph)
-    LOSS.append(Loss1)
-
-min = min(LOSS)
-imin = LOSS.index(min)
-wmin = W[imin]
-charges_min = CHARGE[imin]
-graph_min = GRAPHE[imin]
 
 
 
-print(min, wmin)
-afficher_graphe(charges_min, graph_min)
+###########################RANDOM METHOD n°else######################################################
+
+####################################################################################################################
+#########################methode min max simple (1)####################################################################
 
 
-'''
-k=10
 
-d=1
-lossbis = []
-weightbis = []
+def Loss_weight_nx_2(weight):
+    CHARGES_weight = [[] for i in range(nombre_edge)]
+    graph = create_nx(weight)
 
-for pas in range(1, 10):
+    for row in DEMANDE:
+
+        nodeA = int(row[0])
+
+        nodeB = int(row[1])
+
+        demande = row[2]
+
+        paths_unique = nx.all_shortest_paths(graph, nodeA, nodeB, weight='weight')
+        paths_unique = list(paths_unique)
+        nombre_passage = [0 for i in range(nombre_edge)]
+        lenpath = len(paths_unique)
+
+        for path in paths_unique:
+
+            for i in range(len(path) - 1):
+                nodeprev, nodesuiv = path[i], path[i + 1]
+
+                for rowa in EDGES:
+                    if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                            or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+                        nombre_passage[rowa[0] - 1] += 1
+
+        for path1 in paths_unique:
+
+            for i in range(len(path1) - 1):
+                nodeprev, nodesuiv = path1[i], path1[i + 1]
+
+                for rowa in EDGES:
+                    if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                            or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+                        CHARGES_weight[rowa[0] - 1].append(demande * nombre_passage[rowa[0] - 1] / lenpath)
+
+    charges_tot_weight = []
+
+    for charge in CHARGES_weight:
+        charges_tot_weight.append(int(10 * sum(charge)) / 10)
+
+    charge_capacite = []
+    for i in range(len(charges_tot_weight)):
+        charge_capacite.append(int(10 * charges_tot_weight[i] / EDGES[i][4]) / 10)
+
+    MAX = max(charge_capacite)
+    iMAX = charge_capacite.index(MAX)
+    MIN = min(charge_capacite)
+    iMIN = charge_capacite.index(MIN)
+    return iMAX, MAX, iMIN, MIN, charge_capacite, graph
 
 
-    for i in range(k):
-        weightbis1 = un_pas(pas, WEIGHTS_global, d)
-        weightdif = []
-        for i in range(len(weightbis1)):
-            weightdif.append(weightbis1[i] - WEIGHTS_global[i])
-        print(weightdif)
-        WEIGHTS_global = weightbis1
+
+def un_pas_min_max(weight):
+    res = weight.copy()
+    i1, L1, i2, L2, ch, gr = Loss_weight_nx_2(weight)
+    res[i1] += 1
+    res[i2] = max(1, res[i2]-1)
+    return res
 
 
-    indice1, Loss1, charge_capa1 = Loss_weight(WEIGHTS_global)
 
 
-    print(WEIGHTS_global)
-    print(indice1, Loss1)
-    afficher_graphe(WEIGHTS_global)
 
-    lossbis.append(Loss1)
-    weightbis.append(WEIGHTS_global)
 
-min = min(lossbis)
-imin = lossbis.index(min)
-wmin = weightbis[imin]
 
-print(min, wmin)'''
-'''
-d=1
-for i in range(k):
-    weights = un_pas(1, weights, d)
+##### Méthode N max (on augmente le poids de N max) (2)###############################"
 
-indice1, Loss1, charge_capa1 = Loss_weight(weights)
 
-print(weights)
-print(indice1, Loss1)
-afficher_graphe(weights)
+def N_max_elements(charge, N):
+    result_list = []
+    l = charge.copy()
+  
+    for i in range(0, N): 
+        maximum = 0
+          
+        for j in range(len(l)):     
+            if l[j] > maximum:
+                maximum = l[j]
+        index = charge.index(maximum)         
+        l.remove(maximum)
+        result_list.append((index, maximum))
+          
+    return result_list
+    
+def N_min_elements(charge, N):
+    result_list = []
+    l = charge.copy()
+  
+    for i in range(0, N): 
+        minimum = 0
+          
+        for j in range(len(l)):     
+            if l[j] < minimum:
+                minimum = l[j]
+        index = charge.index(minimum)         
+        l.remove(minimum)
+        result_list.append((index,minimum))
+          
+    return result_list
 
-'''
 
-#################################################################################################################
+
+def Loss_weight_nx_3(weight, N):
+    CHARGES_weight = [[] for i in range(nombre_edge)]
+    graph = create_nx(weight)
+
+    for row in DEMANDE:
+
+        nodeA = int(row[0])
+
+        nodeB = int(row[1])
+
+        demande = row[2]
+
+        paths_unique = nx.all_shortest_paths(graph, nodeA, nodeB, weight='weight')
+        paths_unique = list(paths_unique)
+        nombre_passage = [0 for i in range(nombre_edge)]
+        lenpath = len(paths_unique)
+
+        for path in paths_unique:
+
+            for i in range(len(path) - 1):
+                nodeprev, nodesuiv = path[i], path[i + 1]
+
+                for rowa in EDGES:
+                    if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                            or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+                        nombre_passage[rowa[0] - 1] += 1
+
+        for path1 in paths_unique:
+
+            for i in range(len(path1) - 1):
+                nodeprev, nodesuiv = path1[i], path1[i + 1]
+
+                for rowa in EDGES:
+                    if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                            or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+                        CHARGES_weight[rowa[0] - 1].append(demande * nombre_passage[rowa[0] - 1] / lenpath)
+
+    charges_tot_weight = []
+
+    for charge in CHARGES_weight:
+        charges_tot_weight.append(int(10 * sum(charge)) / 10)
+
+    charge_capacite = []
+    for i in range(len(charges_tot_weight)):
+        charge_capacite.append(int(10 * charges_tot_weight[i] / EDGES[i][4]) / 10)
+
+    MAX = max(charge_capacite)
+    iMAX = charge_capacite.index(MAX)
+    res_max = N_max_elements(charge_capacite, N)
+    res_min = N_min_elements(charge_capacite, N)
+    return iMAX, MAX, res_max, res_min, charge_capacite
+
+
+def un_pas_N_max(weight, N, n):
+    res = weight.copy()
+    imax, maxi, list_max, liste_min, ch = Loss_weight_nx_3(weight, N)
+    for x in list_max:
+        res[x[0]] += 1/n
+        
+    for x in liste_min:
+        res[x[0]] = max(1, res[x[0]]-1/n)
+    return res
+
+
+
+
+
+
+###### Méthode epsilon (on augmente le poids de tous ceux proche du max à epsilon près) (3)
+
+
+
+
+def Loss_weight_nx_eps(weight, eps):
+    CHARGES_weight = [[] for i in range(nombre_edge)]
+    graph = create_nx(weight)
+
+    for row in DEMANDE:
+
+        nodeA = int(row[0])
+
+        nodeB = int(row[1])
+
+        demande = row[2]
+
+        paths_unique = nx.all_shortest_paths(graph, nodeA, nodeB, weight='weight')
+        paths_unique = list(paths_unique)
+        nombre_passage = [0 for i in range(nombre_edge)]
+        lenpath = len(paths_unique)
+
+        for path in paths_unique:
+
+            for i in range(len(path) - 1):
+                nodeprev, nodesuiv = path[i], path[i + 1]
+
+                for rowa in EDGES:
+                    if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                            or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+                        nombre_passage[rowa[0] - 1] += 1
+
+        for path1 in paths_unique:
+
+            for i in range(len(path1) - 1):
+                nodeprev, nodesuiv = path1[i], path1[i + 1]
+
+                for rowa in EDGES:
+                    if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                            or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+                        CHARGES_weight[rowa[0] - 1].append(demande * nombre_passage[rowa[0] - 1] / lenpath)
+
+    charges_tot_weight = []
+
+    for charge in CHARGES_weight:
+        charges_tot_weight.append(int(10 * sum(charge)) / 10)
+
+    charge_capacite = []
+    for i in range(len(charges_tot_weight)):
+        charge_capacite.append(int(10 * charges_tot_weight[i] / EDGES[i][4]) / 10)
+
+    MAX = max(charge_capacite)
+    iMAX = charge_capacite.index(MAX)
+    MIN = min(charge_capacite)
+    iMIN = charge_capacite.index(MIN)
+    tab_max = []
+    tab_min = []
+    for i in range(len(charge_capacite)):
+        if charge_capacite[i] >= MAX - eps:
+            tab_max.append((i, charge_capacite[i]))
+        if charge_capacite[i] <= MIN + eps:
+            tab_min.append((i, charge_capacite[i]))
+
+    return MAX, iMAX, tab_max, tab_min, charge_capacite
+
+def un_pas_max_eps(weight, eps, n):
+    res = weight.copy()
+    M, iM, tab_max, tab_min, ch = Loss_weight_nx_eps(weight, eps)
+    for x in tab_max:
+        res[x[0]] += 1/n
+    for y in tab_min:
+        res[y[0]] = max(1, res[y[0]] - 1/n)
+    return res
+
+
+
+
+
+################################################################################################################
+########################### METHODE D4ARRETES VOISINES###################### (4)
+
+
+
+
+
+def trouver_voisins(arrete):
+    nodeA = EDGES[arrete-1][1]
+    nodeB = EDGES[arrete-1][2]
+    voisins = []
+    for row in EDGES:
+        if row[0] != arrete:
+            if nodeA == row[1] or nodeA == row[2] or nodeB == row[1] or nodeB == row[2]:
+                voisins.append(row[0])
+    return voisins
+
+
+
+def Loss_weight_nx_voisins(weight):
+    CHARGES_weight = [[] for i in range(nombre_edge)]
+    graph = create_nx(weight)
+
+    for row in DEMANDE:
+
+        nodeA = int(row[0])
+
+        nodeB = int(row[1])
+
+        demande = row[2]
+
+        paths_unique = nx.all_shortest_paths(graph, nodeA, nodeB, weight='weight')
+        paths_unique = list(paths_unique)
+        nombre_passage = [0 for i in range(nombre_edge)]
+        lenpath = len(paths_unique)
+
+        for path in paths_unique:
+
+            for i in range(len(path) - 1):
+                nodeprev, nodesuiv = path[i], path[i + 1]
+
+                for rowa in EDGES:
+                    if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                            or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+                        nombre_passage[rowa[0] - 1] += 1
+
+        for path1 in paths_unique:
+
+            for i in range(len(path1) - 1):
+                nodeprev, nodesuiv = path1[i], path1[i + 1]
+
+                for rowa in EDGES:
+                    if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                            or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+                        CHARGES_weight[rowa[0] - 1].append(demande * nombre_passage[rowa[0] - 1] / lenpath)
+
+    charges_tot_weight = []
+
+    for charge in CHARGES_weight:
+        charges_tot_weight.append(int(10 * sum(charge)) / 10)
+
+    charge_capacite = []
+    for i in range(len(charges_tot_weight)):
+        charge_capacite.append(int(10 * charges_tot_weight[i] / EDGES[i][4]) / 10)
+
+    MAX = max(charge_capacite)
+    iMAX = charge_capacite.index(MAX)
+    voisins_max = trouver_voisins(iMAX)
+    MIN = min(charge_capacite)
+    iMIN = charge_capacite.index(MIN)
+    voisins_min = trouver_voisins(iMIN)
+    return MAX, iMAX, MIN, iMIN, voisins_max, voisins_min, charge_capacite, graph
+
+def un_pas_voisins(weight, n):
+    res = weight.copy()
+    M, iM, m, im, tab_max, tab_min, ch, graph = Loss_weight_nx_voisins(weight)
+    for x in tab_max:
+        res[x-1] += 1/n
+    for y in tab_min:
+        res[y-1] = max(1, res[y-1] - 1/n)
+    return res
+
+
+##################################################################################################
+
+def METHODE(numero_methode, n, k, graph):
+    LOSS = [Loss]
+    W = [WEIGHTS_global]
+    CHARGE = [charge_capa]
+    GRAPHE = [graph]
+    weights = WEIGHTS_global
+
+
+    N = 1
+    eps = 0.1
+    if numero_methode == 1:
+
+
+
+        weights = WEIGHTS_global
+        for i in range(k):
+            weights = un_pas_min_max(weights, n)
+            i1, L1, i2, L2, charge_capa1, graphi = Loss_weight_nx_2(weights)
+            LOSS.append(L1)
+            W.append(weights)
+            CHARGE.append(charge_capa1)
+            GRAPHE.append(graphi)
+            print('weights = ', weights)
+            print('indice max = ', i1, 'max = ', L1)
+            print('indice min', i2, 'min = ', L2)
+
+        min1 = min(LOSS)
+        imin = LOSS.index(min1)
+        wmin = W[imin]
+        charges_min = CHARGE[imin]
+        print(charges_min)
+        graph_min = GRAPHE[imin]
+
+        print(min1, wmin)
+
+        afficher_graphe(charges_min, graph_min)
+
+
+    elif numero_methode == 2:
+
+
+
+        for i in range(k):
+            weights = un_pas_N_max(weights, N, n)
+            imax, maxi, tab_max, tab_min, ch = Loss_weight_nx_3(weights, N)
+            LOSS.append(maxi)
+            W.append(weights)
+            CHARGE.append(ch)
+
+            print('indicemax = ', imax, 'max = ', maxi, weights)
+
+        min1 = min(LOSS)
+        imin = LOSS.index(min1)
+        wmin = W[imin]
+        charges_min = CHARGE[imin]
+
+        print(min1, wmin)
+
+        afficher_graphe(charges_min, graph)
+
+    elif numero_methode == 3:
+
+        for i in range(k):
+            weights = un_pas_max_eps(weights, eps, n)
+            M, iM, l1, l2, ch = Loss_weight_nx_eps(weights, eps)
+            W.append(weights)
+            LOSS.append(M)
+            CHARGE.append(ch)
+            print(weights)
+            print(iM, M)
+
+        min1 = min(LOSS)
+        imin = LOSS.index(min1)
+        wmin = W[imin]
+        charges_min = CHARGE[imin]
+
+        print(min1, wmin)
+
+        afficher_graphe(charges_min, graph)
+
+
+    elif numero_methode == 4:
+
+
+        for i in range(k):
+            weights = un_pas_voisins(weights, n)
+            M, iM, m, im, tab_max, tab_min, ch, graph = Loss_weight_nx_voisins(weights)
+            W.append(weights)
+            LOSS.append(M)
+            CHARGE.append(ch)
+            print(weights)
+
+            print('indice max = ', iM, 'max = ', M)
+            print('indice min = ', im, 'max = ', m)
+
+        min1 = min(LOSS)
+        imin = LOSS.index(min1)
+        wmin = W[imin]
+        charges_min = CHARGE[imin]
+
+        print(min1, wmin)
+
+        afficher_graphe(charges_min, graph)
+
+    else :
+        for i in range(k):
+            weight = [random.randint(1, 5) for j in range(nombre_edge)]
+            W.append(weight)
+            ind, Loss1, charges_tot_weight2, graph = Loss_weight_nx(weight)
+            CHARGE.append(charges_tot_weight2)
+            GRAPHE.append(graph)
+            LOSS.append(Loss1)
+
+        min1 = min(LOSS)
+        imin = LOSS.index(min1)
+        wmin = W[imin]
+        charges_min = CHARGE[imin]
+        graph_min = GRAPHE[imin]
+
+        print(min1, wmin)
+        afficher_graphe(charges_min, graph_min)
+
+
+METHODE(5, 1, 1000, graph)
