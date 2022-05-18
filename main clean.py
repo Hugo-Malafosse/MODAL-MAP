@@ -337,11 +337,11 @@ def Loss_weight_nx_2(weight):
 
 
 
-def un_pas_min_max(weight):
+def un_pas_min_max(weight, n):
     res = weight.copy()
     i1, L1, i2, L2, ch, gr = Loss_weight_nx_2(weight)
-    res[i1] += 1
-    res[i2] = max(1, res[i2]-1)
+    res[i1] += 1/n
+    res[i2] = max(1, res[i2]-1/n)
     return res
 
 
@@ -640,9 +640,7 @@ def METHODE(numero_methode, n, k, graph):
             W.append(weights)
             CHARGE.append(charge_capa1)
             GRAPHE.append(graphi)
-            print('weights = ', weights)
-            print('indice max = ', i1, 'max = ', L1)
-            print('indice min', i2, 'min = ', L2)
+
 
         min1 = min(LOSS)
         imin = LOSS.index(min1)
@@ -667,7 +665,7 @@ def METHODE(numero_methode, n, k, graph):
             W.append(weights)
             CHARGE.append(ch)
 
-            print('indicemax = ', imax, 'max = ', maxi, weights)
+
 
         min1 = min(LOSS)
         imin = LOSS.index(min1)
@@ -686,8 +684,7 @@ def METHODE(numero_methode, n, k, graph):
             W.append(weights)
             LOSS.append(M)
             CHARGE.append(ch)
-            print(weights)
-            print(iM, M)
+
 
         min1 = min(LOSS)
         imin = LOSS.index(min1)
@@ -708,10 +705,7 @@ def METHODE(numero_methode, n, k, graph):
             W.append(weights)
             LOSS.append(M)
             CHARGE.append(ch)
-            print(weights)
 
-            print('indice max = ', iM, 'max = ', M)
-            print('indice min = ', im, 'max = ', m)
 
         min1 = min(LOSS)
         imin = LOSS.index(min1)
@@ -740,5 +734,17 @@ def METHODE(numero_methode, n, k, graph):
         print(min1, wmin)
         afficher_graphe(charges_min, graph_min)
 
-
+print('methode rand')
 METHODE(5, 1, 1000, graph)
+
+print('methode voisins')
+METHODE(4, 1, 100, graph)
+
+print('methode eps')
+METHODE(3, 1, 100, graph)
+
+print('methode nmax')
+METHODE(2, 1, 100, graph)
+
+print('methode minmax simple')
+METHODE(1, 1, 100, graph)
