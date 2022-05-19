@@ -15,6 +15,7 @@ from Graphe import Graphe
 import itertools
 import threading
 import time
+
 import sys
 
 
@@ -646,13 +647,12 @@ def METHODE(numero_methode, n, k, graph):
         imin = LOSS.index(min1)
         wmin = W[imin]
         charges_min = CHARGE[imin]
-        print(charges_min)
         graph_min = GRAPHE[imin]
 
-        print(min1, wmin)
+        #print(min1, wmin)
 
-        afficher_graphe(charges_min, graph_min)
-
+        #afficher_graphe(charges_min, graph_min)
+        return min1
 
     elif numero_methode == 2:
 
@@ -672,9 +672,10 @@ def METHODE(numero_methode, n, k, graph):
         wmin = W[imin]
         charges_min = CHARGE[imin]
 
-        print(min1, wmin)
+        #print(min1, wmin)
 
-        afficher_graphe(charges_min, graph)
+        #afficher_graphe(charges_min, graph)
+        return min1
 
     elif numero_methode == 3:
 
@@ -691,10 +692,10 @@ def METHODE(numero_methode, n, k, graph):
         wmin = W[imin]
         charges_min = CHARGE[imin]
 
-        print(min1, wmin)
+        #print(min1, wmin)
 
-        afficher_graphe(charges_min, graph)
-
+        #afficher_graphe(charges_min, graph)
+        return min1
 
     elif numero_methode == 4:
 
@@ -712,9 +713,10 @@ def METHODE(numero_methode, n, k, graph):
         wmin = W[imin]
         charges_min = CHARGE[imin]
 
-        print(min1, wmin)
+        #print(min1, wmin)
 
-        afficher_graphe(charges_min, graph)
+        #afficher_graphe(charges_min, graph)
+        return min1
 
     else :
         for i in range(k):
@@ -731,9 +733,10 @@ def METHODE(numero_methode, n, k, graph):
         charges_min = CHARGE[imin]
         graph_min = GRAPHE[imin]
 
-        print(min1, wmin)
-        afficher_graphe(charges_min, graph_min)
-
+        #print(min1, wmin)
+        #afficher_graphe(charges_min, graph_min)
+        return min1
+'''
 print('methode rand')
 METHODE(5, 1, 1000, graph)
 
@@ -748,3 +751,86 @@ METHODE(2, 1, 100, graph)
 
 print('methode minmax simple')
 METHODE(1, 1, 100, graph)
+
+'''
+
+
+def Test_seuil(numero_methode):
+    seuil = METHODE(5, 1, 100, graph)
+
+
+    methode_minmax = seuil + 1
+    iter = 0
+    MIN = []
+    while methode_minmax>seuil:
+        methode_minmax = METHODE(numero_methode, 1, 5, graph)
+        iter += 1
+        MIN.append(methode_minmax)
+    print('iterations', iter)
+    x = [i for i in range(iter)]
+    plt.plot(x, MIN)
+
+    # naming the x axis
+    plt.xlabel('iteration - axis')
+    # naming the y axis
+    plt.ylabel('methode_minmax - axis')
+
+    # giving a title to my graph
+    plt.title('Efficacité de la methode minmax')
+
+    # function to show the plot
+    plt.show()
+
+
+def Test_static(numero_methode, delta):
+    seuil = METHODE(numero_methode, 1, 100, graph)
+
+
+    methode_minmax = seuil + 1
+    iter = 0
+    MIN = []
+    while abs(methode_minmax-seuil)>delta:
+        seuil = methode_minmax.copy()
+        methode_minmax = METHODE(numero_methode, 1, 1, graph)
+        iter += 1
+        MIN.append(methode_minmax)
+    print('iterations', iter)
+    x = [i for i in range(iter)]
+    plt.plot(x, MIN)
+
+    # naming the x axis
+    plt.xlabel('iteration - axis')
+    # naming the y axis
+    plt.ylabel('methode_minmax - axis')
+
+    # giving a title to my graph
+    plt.title('Efficacité de la methode minmax')
+
+    # function to show the plot
+    plt.show()
+
+
+def Test_temps(numero_methode, itermax):
+    iter = 0
+    TEMPS = []
+    while iter<itermax:
+        t1 = time.time()
+        methode_minmax = METHODE(numero_methode, 1, 1, graph)
+        t2 = time.time()
+        t = t2-t1
+        TEMPS.append(t)
+
+    x = [i for i in range(iter)]
+    plt.plot(x, TEMPS)
+
+    # naming the x axis
+    plt.xlabel('iteration - axis')
+    # naming the y axis
+    plt.ylabel('methode_minmax - axis')
+
+    # giving a title to my graph
+    plt.title('Efficacité de la methode minmax')
+
+    # function to show the plot
+    plt.show()
+
