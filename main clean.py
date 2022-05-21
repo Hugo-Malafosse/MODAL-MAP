@@ -1,52 +1,15 @@
 import csv
-import heapq
 import random
-from collections import deque
-from sys import maxsize
-from typing import List
-
+import time
+import math
+import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
-import numpy as np
-from mpl_toolkits.basemap import Basemap
-
-import prioqueue
-from Graphe import Graphe
-import itertools
-import threading
-import time
-
-import sys
-
 
 ######################################################################################################
 # Driver Code
 
 
-'''def animate_loading(method: object) -> object:
-    def animated():
-
-        done = False
-
-        # here is the animation
-        def animate():
-            time.sleep(0.000001)
-            for c in itertools.cycle(['|', '/', '-', '\\']):
-                if done:
-                    break
-                sys.stdout.write('\rloading ' + c)
-                sys.stdout.flush()
-                time.sleep(0.1)
-            sys.stdout.write('\rDone!     ')
-
-        t = threading.Thread(target=animate)
-        t.start()
-
-        # process method here
-        method()
-        done = True
-
-    return animated()'''
 
 
 file = open("edge.csv")
@@ -136,7 +99,7 @@ def create_nx(weight):
                    , styl='solid')
     return g
 
-
+'''
 def Loss_weight_nx(weight):
     CHARGES_weight = [[] for i in range(nombre_edge)]
     graph = create_nx(weight)
@@ -188,9 +151,59 @@ def Loss_weight_nx(weight):
 
     return iMAX, MAX, charge_capacite, graph
 
+'''
+def Loss_weight_nx(weight):
+    CHARGES_weight = [0 for i in range(nombre_edge)]
+    graph = create_nx(weight)
 
+    for row in DEMANDE:
 
+        nodeA = int(row[0])
 
+        nodeB = int(row[1])
+
+        demande = row[2]
+
+        paths_unique = nx.all_shortest_paths(graph, nodeA, nodeB, weight='weight')
+        paths_unique = list(paths_unique)
+
+        lenpath = len(paths_unique)
+
+        charges_paths = [0 for i in range(lenpath)]
+
+        for i in range(lenpath):
+            path1 = paths_unique[i]
+            for j in range(len(path1) - 1):
+                nodeprev, nodesuiv = path1[j], path1[j + 1]
+
+                for rowa in EDGES:
+                    if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                            or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+                        charges_paths[i] += CHARGES_weight[rowa[0] - 1]
+
+        minchem = min(charges_paths)
+        index = charges_paths.index(minchem)
+        pathmin = paths_unique[index]
+        for k in range(len(pathmin) - 1):
+            nodeprev, nodesuiv = pathmin[k], pathmin[k + 1]
+            for rowa in EDGES:
+                if ((nodeprev == rowa[1] and nodesuiv == rowa[2])
+                        or (nodeprev == rowa[2] and nodesuiv == rowa[1])):
+                    CHARGES_weight[rowa[0] - 1] += demande
+
+    charges_tot_weight = []
+
+    for charge in CHARGES_weight:
+        charges_tot_weight.append(int(10 * charge) / 10)
+
+    charge_capacite = []
+    for i in range(len(charges_tot_weight)):
+        charge_capacite.append(int(10 * charges_tot_weight[i] / EDGES[i][4]) / 10)
+
+    MAX = max(charge_capacite)
+    iMAX = charge_capacite.index(MAX)
+
+    return iMAX, MAX, charge_capacite, graph
 
 
 ##############################################################################################
@@ -617,14 +630,64 @@ def un_pas_voisins(weight, n):
     return res
 
 
-##################################################################################################
+#########################################METHODE GRADIENT################################################################
+def df(i, weight):
+    dweight = weight.copy()
+    dweight[i] += 1
+    indicedf, Lossdf,charge, charges_tot_weightdf = Loss_weight_nx(dweight)
+    indice1, Loss1, charge, charges_tot_weight1 = Loss_weight_nx(weight)
 
-def METHODE(numero_methode, n, k, graph):
+    return (Lossdf - Loss1)
+
+
+def grad(weight):
+    gradient = []
+    for i in range(nombre_edge):
+        gradient.append(df(i, weight))
+    return gradient
+
+
+def un_pas(pas, weight):
+    # passe beaucoup mieux avec pas =1/100
+    weightnouv = (np.array(weight) - pas*np.array(grad(weight)))
+    for i in range (len(weightnouv)):
+        if (weightnouv[i]<=0):
+            weightnouv[i]=1/100
+    return weightnouv
+def un_pas_boule(pas,v,w1,w2):
+    weightnouv = np.array(w1) - pas*np.array(grad(w1)) +v*(np.array(w1)-np.array(w2))
+    for i in range (len(weightnouv)):
+        if (weightnouv[i]<=0):
+            weightnouv[i]=1/100
+    return weightnouv
+def norme(w):
+        som=0
+        for i in range(len(w)):
+            som+=w[i]*w[i]
+        return math.sqrt(som)
+def un_pas_sous(pas,i,w1):
+
+    if(norme(grad(w1))==0):
+        weightnouv = np.array(w1) - pas*np.array(grad(w1))
+    else :
+        pas=1/(i+1)
+        weightnouv=np.array(w1)-(pas/norme(grad(w1)))*np.array(grad(w1))
+    for i in range (len(weightnouv)):
+        if (weightnouv[i]<=0):
+            weightnouv[i]=1/100
+    return weightnouv
+#################################################################################################################
+
+
+
+def METHODE(weight_init, numero_methode, n, k, graph, test_uniter, methode_grad):
+
     LOSS = [Loss]
     W = [WEIGHTS_global]
     CHARGE = [charge_capa]
     GRAPHE = [graph]
-    weights = WEIGHTS_global
+    weights = weight_init
+
 
 
     N = 1
@@ -633,7 +696,7 @@ def METHODE(numero_methode, n, k, graph):
 
 
 
-        weights = WEIGHTS_global
+
         for i in range(k):
             weights = un_pas_min_max(weights, n)
             i1, L1, i2, L2, charge_capa1, graphi = Loss_weight_nx_2(weights)
@@ -643,15 +706,32 @@ def METHODE(numero_methode, n, k, graph):
             GRAPHE.append(graphi)
 
 
+
         min1 = min(LOSS)
-        imin = LOSS.index(min1)
-        wmin = W[imin]
-        charges_min = CHARGE[imin]
-        graph_min = GRAPHE[imin]
+        if test_uniter:
+            imin = LOSS.index(min1)
+            wmin = W[imin]
+            charges_min = CHARGE[imin]
+            graph_min = GRAPHE[imin]
 
-        #print(min1, wmin)
+            print(min1, wmin)
+            x = [i for i in range(k)]
+            x.append(k)
+            plt.plot(x, LOSS)
 
-        #afficher_graphe(charges_min, graph_min)
+            # naming the x axis
+            plt.xlabel('iteration - axis')
+            # naming the y axis
+            plt.ylabel('loss - axis')
+
+            # giving a title to my graph
+            plt.title('Efficacité de la methode sur une iter')
+
+            # function to show the plot
+            plt.show()
+
+            afficher_graphe(charges_min, graph_min)
+
         return min1
 
     elif numero_methode == 2:
@@ -668,13 +748,30 @@ def METHODE(numero_methode, n, k, graph):
 
 
         min1 = min(LOSS)
-        imin = LOSS.index(min1)
-        wmin = W[imin]
-        charges_min = CHARGE[imin]
+        if test_uniter:
+            imin = LOSS.index(min1)
+            wmin = W[imin]
+            charges_min = CHARGE[imin]
+            graph_min = graph
 
-        #print(min1, wmin)
+            print(min1, wmin)
+            x = [i for i in range(k)]
+            x.append(k)
+            plt.plot(x, LOSS)
 
-        #afficher_graphe(charges_min, graph)
+            # naming the x axis
+            plt.xlabel('iteration - axis')
+            # naming the y axis
+            plt.ylabel('loss - axis')
+
+            # giving a title to my graph
+            plt.title('Efficacité de la methode sur une iter')
+
+            # function to show the plot
+            plt.show()
+
+            afficher_graphe(charges_min, graph_min)
+
         return min1
 
     elif numero_methode == 3:
@@ -688,13 +785,30 @@ def METHODE(numero_methode, n, k, graph):
 
 
         min1 = min(LOSS)
-        imin = LOSS.index(min1)
-        wmin = W[imin]
-        charges_min = CHARGE[imin]
+        if test_uniter:
+            imin = LOSS.index(min1)
+            wmin = W[imin]
+            charges_min = CHARGE[imin]
+            graph_min = graph
 
-        #print(min1, wmin)
+            print(min1, wmin)
+            x = [i for i in range(k)]
+            x.append(k)
+            plt.plot(x, LOSS)
 
-        #afficher_graphe(charges_min, graph)
+            # naming the x axis
+            plt.xlabel('iteration - axis')
+            # naming the y axis
+            plt.ylabel('loss - axis')
+
+            # giving a title to my graph
+            plt.title('Efficacité de la methode sur une iter')
+
+            # function to show the plot
+            plt.show()
+
+            afficher_graphe(charges_min, graph_min)
+
         return min1
 
     elif numero_methode == 4:
@@ -706,17 +820,86 @@ def METHODE(numero_methode, n, k, graph):
             W.append(weights)
             LOSS.append(M)
             CHARGE.append(ch)
+            GRAPHE.append(graph)
 
 
         min1 = min(LOSS)
-        imin = LOSS.index(min1)
-        wmin = W[imin]
-        charges_min = CHARGE[imin]
+        if test_uniter:
+            imin = LOSS.index(min1)
+            wmin = W[imin]
+            charges_min = CHARGE[imin]
+            graph_min = GRAPHE[imin]
 
-        #print(min1, wmin)
+            print(min1, wmin)
+            x = [i for i in range(k)]
+            x.append(k)
+            plt.plot(x, LOSS)
 
-        #afficher_graphe(charges_min, graph)
+            # naming the x axis
+            plt.xlabel('iteration - axis')
+            # naming the y axis
+            plt.ylabel('loss - axis')
+
+            # giving a title to my graph
+            plt.title('Efficacité de la methode sur une iter')
+
+            # function to show the plot
+            plt.show()
+
+            afficher_graphe(charges_min, graph_min)
+
         return min1
+
+    elif numero_methode == 0:
+
+        weight = weights
+
+        w2 = weight.copy()
+        for i in range(k):
+            print(i/k)
+            iL, L1, charge_capa2, graph2 = Loss_weight_nx(weight)
+            LOSS.append(L1)
+            W.append(weight)
+            CHARGE.append(charge_capa2)
+            GRAPHE.append(graph2)
+
+            if methode_grad == 1:
+                w = un_pas_boule(1 / n, 0.5, weight, w2)
+            elif methode_grad == 0:
+                w = un_pas(1 / n, weight)
+            elif methode_grad == 2:
+                w = un_pas_sous(1/n, i, weight)
+            w2 = weight.copy()
+            weight = w.copy()
+
+
+        min1 = min(LOSS)
+        if test_uniter:
+            imin = LOSS.index(min1)
+            wmin = W[imin]
+            charges_min = CHARGE[imin]
+            graph_min = GRAPHE[imin]
+
+            print(min1, wmin)
+            x = [i for i in range(k)]
+            x.append(k)
+            plt.plot(x, LOSS)
+
+            # naming the x axis
+            plt.xlabel('iteration - axis')
+            # naming the y axis
+            plt.ylabel('loss - axis')
+
+            # giving a title to my graph
+            plt.title('Efficacité de la methode sur une iter')
+
+            # function to show the plot
+            plt.show()
+
+            afficher_graphe(charges_min, graph_min)
+
+        return min1
+
 
     else :
         for i in range(k):
@@ -728,13 +911,30 @@ def METHODE(numero_methode, n, k, graph):
             LOSS.append(Loss1)
 
         min1 = min(LOSS)
-        imin = LOSS.index(min1)
-        wmin = W[imin]
-        charges_min = CHARGE[imin]
-        graph_min = GRAPHE[imin]
+        if test_uniter:
+            imin = LOSS.index(min1)
+            wmin = W[imin]
+            charges_min = CHARGE[imin]
+            graph_min = GRAPHE[imin]
 
-        #print(min1, wmin)
-        #afficher_graphe(charges_min, graph_min)
+            print(min1, wmin)
+            x = [i for i in range(k)]
+            x.append(k)
+            plt.plot(x, LOSS)
+
+            # naming the x axis
+            plt.xlabel('iteration - axis')
+            # naming the y axis
+            plt.ylabel('loss - axis')
+
+            # giving a title to my graph
+            plt.title('Efficacité de la methode sur une iter')
+
+            # function to show the plot
+            plt.show()
+
+            afficher_graphe(charges_min, graph_min)
+
         return min1
 '''
 print('methode rand')
@@ -753,22 +953,46 @@ print('methode minmax simple')
 METHODE(1, 1, 100, graph)
 
 '''
+def Test_perf(numero_methode, itermax, k, test, methode_grad):
+
+    L = []
+    x = [i for i in range(itermax)]
+    for i in range(itermax):
+        weight_init = [random.randint(1,5) for i in range(nombre_edge)]
+        L.append(METHODE(weight_init, numero_methode, 1, k, graph, test, methode_grad))
+    plt.plot(x, L)
+
+    # naming the x axis
+    plt.xlabel('iteration - axis')
+    # naming the y axis
+    plt.ylabel('loss - axis')
+
+    # giving a title to my graph
+    plt.title('Efficacité de la methode')
+
+    # function to show the plot
+    plt.show()
 
 
-def Test_seuil(numero_methode):
-    seuil = METHODE(5, 1, 100, graph)
 
 
+
+def Test_seuil(weight_init, numero_methode, rand, test):
+    seuil = METHODE(5, 1, rand, graph, test)
+
+    print(seuil)
     methode_minmax = seuil + 1
     iter = 0
     MIN = []
     while methode_minmax>seuil:
-        methode_minmax = METHODE(numero_methode, 1, 5, graph)
+        methode_minmax = METHODE(weight_init, numero_methode, 1, 10, graph, test)
+        print(methode_minmax)
         iter += 1
         MIN.append(methode_minmax)
     print('iterations', iter)
     x = [i for i in range(iter)]
-    plt.plot(x, MIN)
+    seuiltab = [seuil for i in range(iter)]
+    plt.plot(x, MIN, x, seuiltab, )
 
     # naming the x axis
     plt.xlabel('iteration - axis')
@@ -782,20 +1006,25 @@ def Test_seuil(numero_methode):
     plt.show()
 
 
-def Test_static(numero_methode, delta):
-    seuil = METHODE(numero_methode, 1, 100, graph)
+def Test_static(weight_init, numero_methode, delta, seuilrand, test):
+    seuil = METHODE(weight_init, numero_methode, 1, seuilrand, graph, test)
 
-
+    print(seuil)
     methode_minmax = seuil + 1
     iter = 0
     MIN = []
     while abs(methode_minmax-seuil)>delta:
-        seuil = methode_minmax.copy()
-        methode_minmax = METHODE(numero_methode, 1, 1, graph)
+        seuil = methode_minmax
+        print(methode_minmax)
+        methode_minmax = METHODE(weight_init, numero_methode, 1, 1, graph, test)
         iter += 1
         MIN.append(methode_minmax)
+
+    methode_minmax = METHODE(weight_init, numero_methode, 1, 1, graph, test)
+    MIN.append(methode_minmax)
     print('iterations', iter)
     x = [i for i in range(iter)]
+    x.append(iter)
     plt.plot(x, MIN)
 
     # naming the x axis
@@ -810,18 +1039,24 @@ def Test_static(numero_methode, delta):
     plt.show()
 
 
-def Test_temps(numero_methode, itermax):
+
+
+def Test_temps(weight_init, numero_methode, itermax, test):
     iter = 0
-    TEMPS = []
+    TEMPS_relat= []
+    Temps_absol = []
     while iter<itermax:
         t1 = time.time()
-        methode_minmax = METHODE(numero_methode, 1, 1, graph)
+        Temps_absol.append(t1)
+        methode_minmax = METHODE(weight_init, numero_methode, 1, 1, graph, test)
         t2 = time.time()
         t = t2-t1
-        TEMPS.append(t)
+        TEMPS_relat.append(t)
+        iter+=1
 
     x = [i for i in range(iter)]
-    plt.plot(x, TEMPS)
+    plt.plot(x, TEMPS_relat)
+
 
     # naming the x axis
     plt.xlabel('iteration - axis')
@@ -829,8 +1064,37 @@ def Test_temps(numero_methode, itermax):
     plt.ylabel('methode_minmax - axis')
 
     # giving a title to my graph
-    plt.title('Efficacité de la methode minmax')
+    plt.title('Efficacité de la methode minmax temps relat')
 
     # function to show the plot
     plt.show()
 
+    plt.plot(x, Temps_absol)
+    plt.xlabel('iteration - axis')
+    # naming the y axis
+    plt.ylabel('methode_minmax  - axis')
+
+    # giving a title to my graph
+    plt.title('Efficacité de la methode minmax temps absolu')
+
+    # function to show the plot
+    plt.show()
+
+
+
+weight_init = WEIGHTS_global
+
+def TEST_uni(n, k):
+    METHODE(weight_init, 1, n, k, graph, True, 1)
+    METHODE(weight_init, 2, n, k, graph, True, 1)
+    METHODE(weight_init, 3, n, k, graph, True, 1)
+    METHODE(weight_init, 4, n, k, graph, True, 1)
+    METHODE(weight_init, 5, n, k, graph, True, 1)
+
+METHODE(weight_init, 0, 2, 20, graph, True, 0)
+METHODE(weight_init, 0, 2, 20, graph, True, 1)
+METHODE(weight_init, 0, 2, 20, graph, True, 2)
+
+
+## 1612.1 est un minimum local ,et 1236.6 en 52,910 le meilleire minimum que j'ai puis atteint est 816
+#weight=[int(random.randint(1,10)) +1 for i in range(len(WEIGHTS_global))]
